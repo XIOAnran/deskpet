@@ -1,0 +1,58 @@
+name: 构建小海桌宠
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        if (Test-Path requirements.txt) { pip install -r requirements.txt } else { pip install PyQt5 pillow pyinstaller }
+      shell: pwsh
+
+    - name: 生成图标与处理图片
+      run: |
+        # 如果没有去背景图片则尝试自动生成
+        if (-not (Test-Path .\character_nobg.png)) {
+          if (Test-Path .\character.jpg -or Test-Path .\character.png) {
+            python remove_bg.py
+          } else {
+            Write-Host "未找到 character.jpg/character.png，跳过去背景步骤"
+          }
+        } else {
+          Write-Host "character_nobg.png 已存在，跳过去背景"
+        }
+        # 生成 icon.ico（make_icon.py 会根据存在的图片生成）
+        python make_icon.py
+      shell: pwsh
+
+    - name: 构建 EXE
+      run: |
+        pyinstaller --onefile --windowed --name "小海桌宠" \
+          --add-data "character_nobg.png;." \
+          --icon icon.ico \
+          --hidden-import PyQt5.sip \
+          --clean \
+          --noconfirm \
+          deskpet.py
+      shell: pwsh
+
+    - name: 上传产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: 小海桌宠
+        path: dist/*.exe
