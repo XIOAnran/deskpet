@@ -8,6 +8,11 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    # 全局启用 Python UTF-8 模式并设置 IO 编码为 utf-8，防止控制台打印中文时报错
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: 'utf-8'
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -21,6 +26,8 @@ jobs:
     - name: 安装依赖
       shell: pwsh
       run: |
+        # 切换控制台到 UTF-8（通过 cmd）
+        cmd /c chcp 65001
         python -m pip install --upgrade pip
         if (Test-Path '.\requirements.txt') {
           pip install -r requirements.txt
@@ -31,6 +38,9 @@ jobs:
     - name: 生成图标与处理图片
       shell: pwsh
       run: |
+        # 切换控制台到 UTF-8，避免 Python print 中文时报错
+        cmd /c chcp 65001
+
         # 如果没有去背景图片则尝试自动生成
         if (-not (Test-Path '.\character_nobg.png')) {
           if ((Test-Path '.\character.jpg') -or (Test-Path '.\character.png')) {
@@ -48,6 +58,9 @@ jobs:
     - name: 构建 EXE（使用更稳健的 args 列表）
       shell: pwsh
       run: |
+        # 切换控制台到 UTF-8（保险起见）
+        cmd /c chcp 65001
+
         # 构造参数数组，避免命令行拼接/转义问题
         $argsList = @('--onefile', '--windowed', '--name', '小海桌宠')
 
